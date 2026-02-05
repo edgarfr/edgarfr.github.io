@@ -50,6 +50,8 @@
 
 <body>
 
+  <canvas id="nn-canvas"></canvas>
+
   <!--
     - #MAIN
   -->
@@ -73,6 +75,7 @@
 
           <p class="title">Machine Learning Engineer<span class="cursor-blink"></span></p>
           <p class="title"><img class="company-logo" src="https://prowly-prod.s3.eu-west-1.amazonaws.com/uploads/press_rooms/company_logos/56072/f4594b9d9d7ad28d05f1d4b869daea1d.png"></p>
+
         </div>
 
         <button class="info_more-btn" data-sidebar-btn>
@@ -190,14 +193,19 @@
           </p>
           <p>
             Beyond engineering, I'm passionate about <span class="highlight">entrepreneurship and the startup ecosystem</span> — where speed, creativity, and execution shape the future 🚀.
+            <span class="confidence-badge" data-tooltip="This description was generated using a model. Confidence: 99.7%"><span class="conf-dot"></span>confidence: <span class="conf-value">99.7%</span></span>
           </p>
         </section>
 
-        <blockquote class="quote">
+        <div class="ml-thinking">
+          <div class="ml-loader"><i></i><i></i><i></i><i></i><i></i></div>
+          <span class="think-text">training model...</span>
+        </div>
+
+        <!-- <blockquote class="quote">
           <p>"Good ideas are always crazy until they're not."</p>
           <footer>— Elon Musk</footer>
-        </blockquote>
-
+        </blockquote> -->
 
         <!--
           - service
