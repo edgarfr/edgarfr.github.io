@@ -17,13 +17,6 @@ sidebarBtn.addEventListener("click", function () { elementToggleFunc(sidebar); }
 
 
 
-
-
-
-
-
-
-
 // page navigation variables
 const navigationLinks = document.querySelectorAll("[data-nav-link]");
 const pages = document.querySelectorAll("[data-page]");
@@ -251,4 +244,163 @@ function startThinkingAnimation() {
   }
 
   startTyping(0);
+})();
+
+
+// Hover tokenize for about section (inline)
+(function () {
+  const aboutText = document.querySelector('.about-text');
+  if (!aboutText) return;
+
+  let isReady = false;
+
+  // Token colors
+  const hues = [340, 262, 199, 160, 45, 14, 291, 180];
+
+  function getHueForToken(token) {
+    let hash = 0;
+    for (let i = 0; i < token.length; i++) {
+      hash = ((hash << 5) - hash) + token.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return hues[Math.abs(hash) % hues.length];
+  }
+
+  // BPE-style tokenization (simulated subword units)
+  // Common tokens that stay whole (like in real tokenizers)
+  const wholeTokens = new Set(['the', 'and', 'for', 'that', 'with', 'are', 'this', 'from', 'have', 'was', 'will', 'your', 'can', 'all', 'been', 'has', 'more', 'when', 'who', 'they', 'its', 'into', 'only', 'other', 'new', 'some', 'could', 'time', 'very', 'what', 'about', 'which', 'their', 'would', 'make', 'like', 'just', 'over', 'such', 'our', 'most', 'also', 'made', 'after', 'being', 'where', 'work', 'code', 'data', 'model']);
+
+  function tokenizeBPE(word) {
+    const lower = word.toLowerCase();
+
+    // Very short words or common tokens stay whole
+    if (word.length <= 2 || wholeTokens.has(lower)) return [word];
+
+    // Simulate BPE: split into subword chunks of 2-4 chars
+    const tokens = [];
+    let i = 0;
+
+    while (i < word.length) {
+      // Determine chunk size (2-4 chars, biased toward 3)
+      let chunkSize;
+      const remaining = word.length - i;
+
+      if (remaining <= 4) {
+        chunkSize = remaining; // Take rest if short
+      } else {
+        // Vary chunk size based on position hash for consistency
+        const posHash = (word.charCodeAt(i) * 31 + i) % 10;
+        chunkSize = posHash < 3 ? 2 : (posHash < 7 ? 3 : 4);
+        // Don't leave tiny remainder
+        if (remaining - chunkSize < 2 && remaining > chunkSize) {
+          chunkSize = Math.ceil(remaining / 2);
+        }
+      }
+
+      tokens.push(word.slice(i, i + chunkSize));
+      i += chunkSize;
+    }
+
+    return tokens;
+  }
+
+  // Wrap text as tokens inline (preserving HTML structure)
+  function wrapTokensInElement(element) {
+    let tokenCount = 0;
+
+    function processNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent;
+        if (!text.trim()) return;
+
+        const fragment = document.createDocumentFragment();
+        // Split by word boundaries but keep punctuation attached
+        const parts = text.split(/(\s+)/);
+
+        parts.forEach(part => {
+          if (/^\s+$/.test(part)) {
+            fragment.appendChild(document.createTextNode(part));
+          } else if (part) {
+            // Separate leading/trailing punctuation, handle contractions (I'm, don't)
+            const match = part.match(/^([^\w]*)([\w']+)([^\w]*)$/);
+            if (match) {
+              const [, leadPunct, word, trailPunct] = match;
+              if (leadPunct) fragment.appendChild(document.createTextNode(leadPunct));
+
+              // Handle contractions as single token
+              const tokens = word.includes("'") ? [word] : tokenizeBPE(word);
+              tokens.forEach(token => {
+                const span = document.createElement('span');
+                span.className = 'token-word';
+                span.style.setProperty('--hue', getHueForToken(token));
+                span.textContent = token;
+                fragment.appendChild(span);
+                tokenCount++;
+              });
+
+              if (trailPunct) fragment.appendChild(document.createTextNode(trailPunct));
+            } else {
+              // Fallback: wrap entire part as token
+              const span = document.createElement('span');
+              span.className = 'token-word';
+              span.style.setProperty('--hue', getHueForToken(part));
+              span.textContent = part;
+              fragment.appendChild(span);
+              tokenCount++;
+            }
+          }
+        });
+
+        node.parentNode.replaceChild(fragment, node);
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        // Skip badges
+        if (node.classList.contains('confidence-badge') ||
+            node.classList.contains('token-count-badge')) {
+          return;
+        }
+        // Process children (copy to avoid live collection issues)
+        Array.from(node.childNodes).forEach(processNode);
+      }
+    }
+
+    processNode(element);
+    return tokenCount;
+  }
+
+  function setup() {
+    const paras = aboutText.querySelectorAll('p');
+    let totalTokens = 0;
+
+    paras.forEach(p => {
+      totalTokens += wrapTokensInElement(p);
+    });
+
+    // Update token count (re-query in case DOM changed)
+    const countEl = document.querySelector('.token-count');
+    if (countEl) {
+      countEl.textContent = totalTokens;
+    }
+
+    isReady = true;
+  }
+
+  // Wait for typing animation to complete
+  const observer = new MutationObserver(() => {
+    const mlThinking = document.querySelector('.ml-thinking.visible');
+    if (mlThinking && !isReady) {
+      setTimeout(setup, 500);
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+  // Hover events
+  aboutText.addEventListener('mouseenter', () => {
+    if (isReady) aboutText.classList.add('show-tokens');
+  });
+
+  aboutText.addEventListener('mouseleave', () => {
+    aboutText.classList.remove('show-tokens');
+  });
 })();
